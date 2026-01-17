@@ -1,0 +1,16 @@
+{
+  "name": "nest-otel",
+  "private": true,
+  "workspaces": [
+    "services/*"
+  ],
+  "scripts": {
+    "movie": "npm run start:dev --workspace=services/movie-service",
+    "actor": "npm run start:dev --workspace=services/actor-service",
+    "web": "npm run dev --workspace=services/web-app",
+    "start:all": "concurrently \"npm run actor\" \"npm run movie\" \"npm run web\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}

@@ -1,0 +1,100 @@
+services:
+  # ============================================
+  # MICROSERVICES
+  # ============================================
+
+  web-app:
+    build: ./services/web-app
+    container_name: web-app
+    environment:
+      - PORT=3003
+      - SERVICE_NAME=web-app
+      - MOVIE_SERVICE_URL=http://movie-service:3000
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - NEXT_OTEL_VERBOSE=1
+    ports:
+      - "3003:3003"
+    depends_on:
+      movie-service:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+
+  movie-service:
+    build: ./services/movie-service
+    container_name: movie-service
+    environment:
+      - PORT=3000
+      - ACTOR_SERVICE_URL=http://actor-service:3001
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - SERVICE_NAME=movie-service
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test:
+        ["CMD", "wget", "-q", "--spider", "http://localhost:3000/api/movies/1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    depends_on:
+      actor-service:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+
+  actor-service:
+    build: ./services/actor-service
+    container_name: actor-service
+    environment:
+      - PORT=3001
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - SERVICE_NAME=actor-service
+    ports:
+      - "3001:3001"
+    healthcheck:
+      test:
+        ["CMD", "wget", "-q", "--spider", "http://localhost:3001/api/actors/1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    depends_on:
+      otel-collector:
+        condition: service_started
+
+  # ============================================
+  # OBSERVABILITY STACK
+  # ============================================
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.141.0
+    container_name: otel-collector
+    command: ["--config=/etc/otel/collector-config.yaml"]
+    volumes:
+      - ./docker-volume/collector-config.yaml:/etc/otel/collector-config.yaml
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+
+  tempo:
+    image: grafana/tempo:2.8.2
+    container_name: tempo
+    command: ["-config.file=/etc/tempo.yaml"]
+    volumes:
+      - ./docker-volume/tempo.yaml:/etc/tempo.yaml
+    depends_on:
+      - otel-collector
+
+  grafana:
+    image: grafana/grafana:12.0.0
+    container_name: grafana
+    volumes:
+      - ./docker-volume/grafana-datasources.yaml:/etc/grafana/provisioning/datasources/datasource.yaml
+    ports:
+      - "3030:3000"
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+    depends_on:
+      - tempo
