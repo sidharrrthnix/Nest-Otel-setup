@@ -2,8 +2,16 @@ apiVersion: 1
 
 datasources:
   - name: Tempo
-    uid: tempo_ds
+    uid: tempo
     type: tempo
     access: proxy
     url: http://tempo:3200
     isDefault: true
+    editable: true
+    jsonData:
+      httpMethod: GET
+      streamingEnabled: false
+      nodeGraph:
+        enabled: true
+      search:
+        hide: false
