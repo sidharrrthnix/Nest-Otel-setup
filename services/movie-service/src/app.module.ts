@@ -1,8 +1,17 @@
-import { HttpModule } from '@nestjs/axios';
+import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { Module } from '@nestjs/common';
+import { GraphQLModule } from '@nestjs/graphql';
 import { MovieModule } from './movie/movie.module';
 
 @Module({
-  imports: [HttpModule, MovieModule],
+  imports: [
+    GraphQLModule.forRoot<ApolloDriverConfig>({
+      driver: ApolloDriver,
+      autoSchemaFile: true, // Generate schema in memory
+      playground: true,
+      introspection: true,
+    }),
+    MovieModule,
+  ],
 })
 export class AppModule {}

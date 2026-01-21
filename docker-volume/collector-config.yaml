@@ -11,17 +11,33 @@ processors:
     timeout: 1s
     send_batch_size: 1024
 
+  # Filter only true noise - keep GraphQL operations visible
+  filter/drop-noise:
+    error_mode: ignore
+    traces:
+      span:
+        # Drop Next.js rendering internals (not useful for debugging)
+        - 'name == "BaseServer.pipe"'
+        - 'name == "BaseServer.renderToResponseWithComponents"'
+        - 'name == "LoadComponents.loadComponents"'
+        - 'name == "NextNodeServer.clientComponentLoading"'
+        - 'name == "build component tree"'
+        - 'name == "resolve page components"'
+        - 'name == "resolve segment modules"'
+        - 'name == "start response"'
+        # Drop low-level GraphQL parsing (keep operations)
+        - 'name == "graphql.parse"'
+        - 'name == "graphql.validate"'
+
 exporters:
   otlp/tempo:
     endpoint: "tempo:4317"
     tls:
       insecure: true
-  debug:
-    verbosity: detailed
 
 service:
   pipelines:
     traces:
       receivers: [otlp]
-      processors: [batch]
-      exporters: [otlp/tempo, debug]
+      processors: [filter/drop-noise, batch]
+      exporters: [otlp/tempo]
