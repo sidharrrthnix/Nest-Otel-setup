@@ -37,12 +37,10 @@ const sdk = new NodeSDK({
       '@opentelemetry/instrumentation-express': {
         ignoreLayersType: [ExpressLayerType.MIDDLEWARE],
       },
-      // GraphQL instrumentation - show operation names, skip field resolvers
+      // GraphQL instrumentation
       '@opentelemetry/instrumentation-graphql': {
-        mergeItems: true,
-        allowValues: true,
-        depth: 1,
-        ignoreTrivialResolveSpans: true,
+        allowValues: true, // Show argument/variable values
+        mergeItems: true, // users.*.name instead of users.0.name, users.1.name
       },
     }),
   ],
