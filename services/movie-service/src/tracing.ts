@@ -29,7 +29,7 @@ const sdk = new NodeSDK({
         ignoreIncomingRequestHook: (req) =>
           req.url?.includes('/health') ?? false,
         ignoreOutgoingRequestHook: (req) =>
-          req.path?.includes('api/v1/push') ?? false,
+          req.path?.includes('/v1/traces') ?? false,
       },
       '@opentelemetry/instrumentation-dns': { enabled: false },
       '@opentelemetry/instrumentation-net': { enabled: false },
@@ -40,9 +40,9 @@ const sdk = new NodeSDK({
       // GraphQL instrumentation - show operation names, skip field resolvers
       '@opentelemetry/instrumentation-graphql': {
         mergeItems: true,
-        allowValues: true, // Show variables in traces
-        depth: 1, // Show operation + top-level fields only
-        ignoreTrivialResolveSpans: true, // Skip scalar field resolvers
+        allowValues: true,
+        depth: 1,
+        ignoreTrivialResolveSpans: true,
       },
     }),
   ],

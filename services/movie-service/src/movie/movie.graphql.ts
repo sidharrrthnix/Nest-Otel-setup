@@ -1,27 +1,28 @@
 import {
   Args,
+  Directive,
   Field,
   ID,
   Int,
   ObjectType,
+  Parent,
   Query,
+  ResolveField,
+  ResolveReference,
   Resolver,
 } from '@nestjs/graphql';
 import { MovieService } from './movie.service';
 
+// Actor stub - full type defined in actor-service, referenced here for federation
 @ObjectType()
+@Directive('@key(fields: "id")')
 export class ActorType {
   @Field(() => ID)
   id: number;
-
-  @Field()
-  name: string;
-
-  @Field(() => Int)
-  birthYear: number;
 }
 
 @ObjectType()
+@Directive('@key(fields: "id")')
 export class MovieType {
   @Field(() => ID)
   id: number;
@@ -34,38 +35,42 @@ export class MovieType {
 
   @Field(() => [Int])
   actorIds: number[];
-
-  @Field(() => [ActorType], { nullable: true })
-  actors?: ActorType[];
 }
 
 @Resolver(() => MovieType)
 export class MovieResolver {
   constructor(private readonly movieService: MovieService) {}
 
-  @Query(() => MovieType, { name: 'movie' })
-  async getMovie(
-    @Args('id', { type: () => Int }) id: number,
-  ): Promise<MovieType> {
-    return this.movieService.getMovie(id);
+  @Query(() => MovieType, { name: 'movie', nullable: true })
+  getMovie(@Args('id', { type: () => Int }) id: number): MovieType | null {
+    return this.movieService.getMovieData(id);
   }
 
   @Query(() => [MovieType], { name: 'movies' })
-  async getMovies(): Promise<MovieType[]> {
-    const movies = await Promise.all([
-      this.movieService.getMovie(1),
-      this.movieService.getMovie(2),
-      this.movieService.getMovie(3),
-      this.movieService.getMovie(4),
-    ]);
-    return movies;
+  getMovies(): MovieType[] {
+    return this.movieService.getAllMovies();
   }
 
   @Query(() => [MovieType], { name: 'moviesByYear' })
-  async getMoviesByYear(
+  getMoviesByYear(
     @Args('year', { type: () => Int }) year: number,
-  ): Promise<MovieType[]> {
-    const allMovies = await this.getMovies();
-    return allMovies.filter((m) => m.year === year);
+  ): MovieType[] {
+    return this.movieService.getMoviesByYear(year);
+  }
+
+  // Resolve actors field - returns Actor references for federation
+  @ResolveField(() => [ActorType], { name: 'actors' })
+  getActors(@Parent() movie: MovieType): ActorType[] {
+    // Return actor stubs with just IDs - gateway resolves full Actor from actor-service
+    return movie.actorIds.map((id) => ({ id }));
+  }
+
+  // Federation: called by gateway when resolving Movie references
+  @ResolveReference()
+  resolveReference(reference: {
+    __typename: string;
+    id: number;
+  }): MovieType | null {
+    return this.movieService.getMovieData(reference.id);
   }
 }

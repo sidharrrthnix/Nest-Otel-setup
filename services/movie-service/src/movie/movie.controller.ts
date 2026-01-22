@@ -8,8 +8,8 @@ export class MovieController {
   constructor(private readonly movieService: MovieService) {}
 
   @Get(':id')
-  async getMovie(@Param('id') id: string) {
+  getMovie(@Param('id') id: string) {
     this.logger.log(`Request for movie id: ${id}`);
-    return this.movieService.getMovie(parseInt(id, 10));
+    return this.movieService.getMovieData(parseInt(id, 10));
   }
 }

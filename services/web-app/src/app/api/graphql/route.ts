@@ -1,7 +1,7 @@
 import { context, propagation, trace } from "@opentelemetry/api";
 import { NextRequest, NextResponse } from "next/server";
 
-const MOVIE_SERVICE_URL = process.env.MOVIE_SERVICE_URL || "http://localhost:3000";
+const GATEWAY_URL = process.env.GATEWAY_URL || "http://localhost:3002";
 const tracer = trace.getTracer("web-app-api");
 
 export async function POST(request: NextRequest) {
@@ -18,9 +18,9 @@ export async function POST(request: NextRequest) {
       propagation.inject(context.active(), headers);
 
       span.setAttribute("graphql.operation.name", operationName);
-      span.setAttribute("http.url", `${MOVIE_SERVICE_URL}/graphql`);
+      span.setAttribute("http.url", `${GATEWAY_URL}/graphql`);
 
-      const res = await fetch(`${MOVIE_SERVICE_URL}/graphql`, {
+      const res = await fetch(`${GATEWAY_URL}/graphql`, {
         method: "POST",
         headers,
         body: JSON.stringify(body),

@@ -1,8 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unsafe-return */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-import { HttpService } from '@nestjs/axios';
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { firstValueFrom } from 'rxjs';
+import { Injectable, Logger } from '@nestjs/common';
 
 const MOVIES = [
   { id: 1, title: 'Forrest Gump', year: 1994, actorIds: [1, 2] },
@@ -14,47 +10,24 @@ const MOVIES = [
 @Injectable()
 export class MovieService {
   private readonly logger = new Logger(MovieService.name);
-  private readonly actorServiceUrl: string;
 
-  constructor(private readonly httpService: HttpService) {
-    this.actorServiceUrl =
-      process.env.ACTOR_SERVICE_URL || 'http://localhost:3001';
-  }
-
-  async getMovie(id: number) {
+  getMovieData(id: number) {
     this.logger.log(`Looking up movie id: ${id}`);
-
     const movie = MOVIES.find((m) => m.id === id);
-
     if (!movie) {
       this.logger.warn(`Movie not found: ${id}`);
-      throw new NotFoundException(`Movie with id ${id} not found`);
+      return null;
     }
-
-    this.logger.log(`Found movie: ${movie.title}, fetching actors...`);
-
-    // HTTP call to actor-service - trace ID propagates automatically via OTEL
-    const actors = await this.fetchActors(movie.actorIds);
-
-    return { ...movie, actors };
+    return movie;
   }
 
-  private async fetchActors(actorIds: number[]) {
-    const actors: any[] = [];
+  getAllMovies() {
+    this.logger.log('Getting all movies');
+    return MOVIES;
+  }
 
-    for (const actorId of actorIds) {
-      try {
-        this.logger.log(`Calling actor-service for actor ${actorId}`);
-        const { data } = await firstValueFrom(
-          this.httpService.get(`${this.actorServiceUrl}/api/actors/${actorId}`),
-        );
-        actors.push(data);
-      } catch (error: unknown) {
-        this.logger.warn(`Failed to fetch actor ${actorId}`);
-        this.logger.warn(`Error: ${error as string}`);
-      }
-    }
-
-    return actors;
+  getMoviesByYear(year: number) {
+    this.logger.log(`Getting movies by year: ${year}`);
+    return MOVIES.filter((m) => m.year === year);
   }
 }

@@ -30,4 +30,9 @@ export class ActorService {
     this.logger.log(`Looking up actors: ${ids.join(', ')}`);
     return ACTORS.filter((a) => ids.includes(a.id));
   }
+
+  getAllActors() {
+    this.logger.log('Getting all actors');
+    return ACTORS;
+  }
 }
