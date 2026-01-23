@@ -7,16 +7,24 @@ receivers:
         endpoint: ":4318"
 
 processors:
-  batch:
-    timeout: 1s
-    send_batch_size: 1024
+  # Memory limiter - prevents OOM under load (must be first processor)
+  memory_limiter:
+    check_interval: 1s
+    limit_percentage: 80
+    spike_limit_percentage: 25
 
-  # Filter only true noise - keep GraphQL operations visible
+  # Batch processor - optimizes export efficiency
+  batch:
+    timeout: 5s
+    send_batch_size: 512
+    send_batch_max_size: 1024
+
+  # Filter noise - keep meaningful spans
   filter/drop-noise:
     error_mode: ignore
     traces:
       span:
-        # Drop Next.js rendering internals (not useful for debugging)
+        # Drop Next.js rendering internals
         - 'name == "BaseServer.pipe"'
         - 'name == "BaseServer.renderToResponseWithComponents"'
         - 'name == "LoadComponents.loadComponents"'
@@ -25,19 +33,47 @@ processors:
         - 'name == "resolve page components"'
         - 'name == "resolve segment modules"'
         - 'name == "start response"'
-        # Drop low-level GraphQL parsing (keep operations)
+        # Drop low-level GraphQL parsing
         - 'name == "graphql.parse"'
         - 'name == "graphql.validate"'
+
+  # Add resource attributes for all spans
+  resource:
+    attributes:
+      - key: collector.version
+        value: "0.141.0"
+        action: upsert
 
 exporters:
   otlp/tempo:
     endpoint: "tempo:4317"
     tls:
       insecure: true
+    retry_on_failure:
+      enabled: true
+      initial_interval: 5s
+      max_interval: 30s
+      max_elapsed_time: 300s
+
+  # Debug exporter (enable for troubleshooting)
+  # debug:
+  #   verbosity: detailed
 
 service:
   pipelines:
     traces:
       receivers: [otlp]
-      processors: [filter/drop-noise, batch]
+      processors: [memory_limiter, filter/drop-noise, resource, batch]
       exporters: [otlp/tempo]
+
+  telemetry:
+    logs:
+      level: info
+    metrics:
+      level: detailed
+      readers:
+        - pull:
+            exporter:
+              prometheus:
+                host: "0.0.0.0"
+                port: 8888
